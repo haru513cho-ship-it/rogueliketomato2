@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>トマレボ！完全版</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <!-- Google Fonts -->
+    <link href="[https://fonts.googleapis.com/css2?family=DotGothic16&display=swap](https://fonts.googleapis.com/css2?family=DotGothic16&display=swap)" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DotGothic16', sans-serif;
+            background-color: #0f172a;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            touch-action: manipulation;
+        }
+        .status-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .growth-bar-container {
+            height: 20px;
+            background: #1e293b;
+            border-radius: 10px;
+            border: 2px solid #334155;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            overflow: hidden;
+            width: 100%;
+        }
+        .growth-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #4ade80);
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+            transition: width 0.3s ease;
+        }
+        .sub-meter {
+            height: 8px;
+            background: #0f172a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .btn-action {
+            transition: all 0.1s;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+        }
+        .btn-action:active { 
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+        }
+        .danger-pulse {
+            animation: pulse 1s infinite;
+            color: #ef4444;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .plant-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center h-full p-2">
+
+    <!-- Header Stats -->
+    <div class="w-full max-w-md grid grid-cols-3 gap-1.5 mb-2">
+        <div class="status-card py-2 text-center">
+            <div class="text-[10px] text-green-400 font-bold uppercase tracking-tighter">Money</div>
+            <div id="money-display" class="text-sm font-bold">¥0</div>
+        </div>
+        <div class="status-card py-2 text-center">
+            <div class="text-[10px] text-red-400 font-bold uppercase tracking-tighter">Gen</div>
+            <div id="loop-display" class="text-sm font-bold">1</div>
+        </div>
+        <div class="status-card py-2 text-center">
+            <div class="text-[10px] text-blue-400 font-bold uppercase tracking-tighter">Energy</div>
+            <div id="stamina-display" class="text-sm font-bold">10.0</div>
+        </div>
+    </div>
+
+    <!-- Main View Area -->
+    <div class="w-full max-w-md flex-1 bg-slate-900 rounded-2xl border-2 border-slate-700 relative flex flex-col items-center p-4 shadow-2xl min-h-0">
+        
+        <!-- Environment Meters -->
+        <div class="w-full grid grid-cols-2 gap-4 mb-2 shrink-0">
+            <div>
+                <div class="flex justify-between text-[10px] mb-1 font-bold text-blue-300">
+                    <span>WATER</span><span id="water-val">80%</span>
+                </div>
+                <div class="sub-meter"><div id="water-bar" class="h-full bg-blue-500 w-[80%] transition-all"></div></div>
+            </div>
+            <div>
+                <div class="flex justify-between text-[10px] mb-1 font-bold text-orange-300">
+                    <span>FERTILIZER</span><span id="fert-val">10%</span>
+                </div>
+                <div class="sub-meter"><div id="fert-bar" class="h-full bg-orange-400 w-[10%] transition-all"></div></div>
+            </div>
+        </div>
+
+        <!-- Tomato Visual & Quality Badge -->
+        <div class="relative flex-1 flex flex-col items-center justify-center w-full min-h-0">
+            <div id="plant-visual" class="text-9xl leading-none transition-all duration-500 plant-float">🌱</div>
+            
+            <div class="absolute top-4 right-4 bg-slate-800/90 border-2 border-yellow-500 p-2 rounded-xl text-center shadow-lg">
+                <div class="text-[10px] text-yellow-500 font-bold">品質</div>
+                <div id="quality-display" class="text-2xl font-black text-white">100</div>
+            </div>
+
+            <div id="sucker-badge" class="absolute left-4 top-4 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-full animate-bounce hidden border border-white">
+                わき芽発生！
+            </div>
+        </div>
+
+        <!-- Growth Indicator -->
+        <div class="w-full mt-2 shrink-0">
+            <div class="flex justify-between items-end mb-1 px-1">
+                <div class="flex flex-col">
+                    <span class="text-[9px] text-slate-400 font-bold uppercase">Growth Status</span>
+                    <span id="stage-label" class="text-lg text-green-400 font-bold">発芽</span>
+                </div>
+                <div class="text-right">
+                    <span id="growth-percent" class="text-2xl font-black text-white italic">0%</span>
+                </div>
+            </div>
+            
+            <div class="growth-bar-container">
+                <div id="growth-bar" class="growth-bar-fill w-0"></div>
+            </div>
+            
+            <div id="status-alert" class="h-5 text-[11px] font-bold text-center mt-1.5 opacity-80"></div>
+        </div>
+    </div>
+
+    <!-- Controls / Shop -->
+    <div class="w-full max-w-md mt-3 shrink-0">
+        <div class="flex gap-1">
+            <button onclick="switchTab('farm')" id="tab-farm" class="flex-1 py-2 text-xs font-bold bg-green-600 rounded-t-xl text-white">農場モード</button>
+            <button onclick="switchTab('shop')" id="tab-shop" class="flex-1 py-2 text-xs font-bold bg-slate-800 rounded-t-xl text-slate-400">ショップ</button>
+        </div>
+
+        <div id="panel-farm" class="grid grid-cols-4 gap-2 p-3 bg-slate-800 rounded-b-xl shadow-xl">
+            <button onclick="doAction('water')" class="btn-action bg-blue-700 p-3 rounded-xl flex flex-col items-center">
+                <span class="text-2xl">🚿</span>
+                <span class="text-[9px] font-bold mt-1 uppercase">水 (1)</span>
+            </button>
+            <button onclick="doAction('fertilize')" class="btn-action bg-orange-600 p-3 rounded-xl flex flex-col items-center">
+                <span class="text-2xl">🧪</span>
+                <span class="text-[9px] font-bold mt-1 uppercase">肥 (3)</span>
+            </button>
+            <button onclick="doAction('prune')" id="btn-prune" class="btn-action bg-emerald-700 p-3 rounded-xl flex flex-col items-center opacity-30">
+                <span class="text-2xl">✂️</span>
+                <span class="text-[9px] font-bold mt-1 uppercase">芽 (2)</span>
+            </button>
+            <button id="harvest-btn" onclick="harvest()" disabled class="btn-action bg-slate-700 p-3 rounded-xl flex flex-col items-center opacity-30 cursor-not-allowed">
+                <span class="text-2xl">🧺</span>
+                <span class="text-[9px] font-bold mt-1 uppercase">収穫</span>
+            </button>
+        </div>
+
+        <div id="panel-shop" class="hidden flex flex-col gap-2 p-3 bg-slate-800 rounded-b-xl shadow-xl max-h-40 overflow-y-auto">
+            <button onclick="buy('maxStamina')" class="flex justify-between items-center bg-slate-700 px-4 py-3 rounded-xl text-xs">
+                <span class="font-bold">⚡ 体力上限 +5</span>
+                <span id="price-maxStamina" class="text-yellow-400 font-bold">¥200</span>
+            </button>
+            <button onclick="buy('growthSpeed')" class="flex justify-between items-center bg-slate-700 px-4 py-3 rounded-xl text-xs">
+                <span class="font-bold">🏃 成長速度UP</span>
+                <span id="price-growthSpeed" class="text-yellow-400 font-bold">¥300</span>
+            </button>
+            <button onclick="buy('priceBonus')" class="flex justify-between items-center bg-slate-700 px-4 py-3 rounded-xl text-xs">
+                <span class="font-bold">💎 ブランド化</span>
+                <span id="price-priceBonus" class="text-yellow-400 font-bold">¥500</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="msg-log" class="text-[10px] text-slate-500 h-4 italic mt-1.5 transition-all"></div>
+
+    <script>
+        const state = {
+            money: 0, loop: 1, stamina: 10.0, growth: 0, stage: 0, quality: 100, water: 80, fert: 10,
+            hasSucker: false, stats: { maxStamina: 10, growthSpeed: 1.0, priceBonus: 1.0 },
+            prices: { maxStamina: 200, growthSpeed: 300, priceBonus: 500 }
+        };
+
+        const stages = [
+            { emoji: '🌱', label: '発芽', threshold: 0 },
+            { emoji: '🌿', label: '本葉', threshold: 20 },
+            { emoji: '🪴', label: '定植', threshold: 45 },
+            { emoji: '💛', label: '開花', threshold: 70 },
+            { emoji: '🍅', label: '完熟', threshold: 100 }
+        ];
+
+        function switchTab(tab) {
+            document.getElementById('panel-farm').classList.toggle('hidden', tab !== 'farm');
+            document.getElementById('panel-shop').classList.toggle('hidden', tab !== 'shop');
+            document.getElementById('tab-farm').className = tab === 'farm' ? 'flex-1 py-2 text-xs font-bold bg-green-600 rounded-t-xl text-white' : 'flex-1 py-2 text-xs font-bold bg-slate-800 rounded-t-xl text-slate-400';
+            document.getElementById('tab-shop').className = tab === 'shop' ? 'flex-1 py-2 text-xs font-bold bg-green-600 rounded-t-xl text-white' : 'flex-1 py-2 text-xs font-bold bg-slate-800 rounded-t-xl text-slate-400';
+        }
+
+        function update() {
+            if (state.stamina < state.stats.maxStamina) state.stamina += 0.015;
+            if (state.stage < 4) {
+                let speed = 0.25 * state.stats.growthSpeed;
+                if (state.fert > 15 && state.fert < 65) speed *= 2.0;
+                if (state.water > 40 && state.water < 85) speed *= 1.3;
+                state.growth = Math.min(100, state.growth + speed);
+                state.water = Math.max(0, state.water - 0.22);
+                state.fert = Math.max(0, state.fert - 0.12);
+                let alertMsg = "";
+                if (state.water < 15) { state.quality -= 0.18; alertMsg = "⚠️水不足！"; }
+                else if (state.water > 92) { state.quality -= 0.3; alertMsg = "⚠️過湿！"; }
+                if (state.fert > 85) { state.quality -= 0.5; alertMsg = "⚠️肥料焼け！"; }
+                if (state.hasSucker) state.quality -= 0.15;
+                const alertEl = document.getElementById('status-alert');
+                alertEl.innerText = alertMsg || "光合成中...";
+                alertEl.className = alertMsg ? "h-5 text-[11px] font-bold text-center mt-1.5 danger-pulse" : "h-5 text-[11px] font-bold text-center mt-1.5 text-green-500 opacity-60";
+                if (!state.hasSucker && state.growth > 25 && state.growth < 90 && Math.random() < 0.018) state.hasSucker = true;
+                if (state.growth >= stages[state.stage + 1].threshold) state.stage++;
+            } else { state.growth = 100; }
+            render();
+        }
+
+        function render() {
+            document.getElementById('money-display').innerText = `¥${Math.floor(state.money)}`;
+            document.getElementById('loop-display').innerText = state.loop;
+            document.getElementById('stamina-display').innerText = state.stamina.toFixed(1);
+            document.getElementById('plant-visual').innerText = stages[state.stage].emoji;
+            document.getElementById('stage-label').innerText = stages[state.stage].label;
+            document.getElementById('growth-percent').innerText = `${Math.floor(state.growth)}%`;
+            document.getElementById('growth-bar').style.width = `${state.growth}%`;
+            const qDisplay = document.getElementById('quality-display');
+            const qVal = Math.max(0, Math.floor(state.quality));
+            qDisplay.innerText = qVal;
+            qDisplay.className = qVal > 85 ? "text-2xl font-black text-green-400" : (qVal > 45 ? "text-2xl font-black text-yellow-400" : "text-2xl font-black text-red-500 animate-pulse");
+            document.getElementById('water-bar').style.width = `${state.water}%`;
+            document.getElementById('water-val').innerText = `${Math.floor(state.water)}%`;
+            document.getElementById('fert-bar').style.width = `${state.fert}%`;
+            document.getElementById('fert-val').innerText = `${Math.floor(state.fert)}%`;
+            document.getElementById('sucker-badge').classList.toggle('hidden', !state.hasSucker);
+            document.getElementById('btn-prune').classList.toggle('opacity-30', !state.hasSucker);
+            const hBtn = document.getElementById('harvest-btn');
+            if (state.stage >= 4) {
+                hBtn.disabled = false;
+                hBtn.className = "btn-action bg-red-600 p-3 rounded-xl flex flex-col items-center animate-pulse shadow-xl border-b-4 border-red-950 text-white";
+            } else {
+                hBtn.disabled = true;
+                hBtn.className = "btn-action bg-slate-700 p-3 rounded-xl flex flex-col items-center opacity-30 cursor-not-allowed text-slate-400";
+            }
+            for (let key in state.prices) document.getElementById(`price-${key}`).innerText = `¥${state.prices[key]}`;
+        }
+
+        function doAction(type) {
+            if (type === 'water' && state.stamina >= 1) { state.stamina -= 1; state.water = Math.min(100, state.water + 30); state.quality += 2; log("水やり 🚿"); }
+            else if (type === 'fertilize' && state.stamina >= 3) { state.stamina -= 3; state.fert = Math.min(100, state.fert + 40); state.quality += 5; log("追肥 🧪"); }
+            else if (type === 'prune' && state.hasSucker && state.stamina >= 2) { state.stamina -= 2; state.hasSucker = false; state.quality += 25; log("芽かき成功 ✨"); }
+        }
+
+        function buy(id) {
+            if (state.money >= state.prices[id]) {
+                state.money -= state.prices[id];
+                if (id === 'maxStamina') state.stats.maxStamina += 5;
+                if (id === 'growthSpeed') state.stats.growthSpeed += 0.5;
+                if (id === 'priceBonus') state.stats.priceBonus += 0.7;
+                state.prices[id] = Math.floor(state.prices[id] * 1.5);
+                log("購入完了 🛒"); render();
+            } else { log("お金不足 💸"); }
+        }
+
+        function harvest() {
+            const reward = Math.floor(state.quality * 2.8 * state.stats.priceBonus * (1 + (state.loop - 1) * 0.35));
+            state.money += reward;
+            log(`収穫！ ¥${reward}獲得 🍅`);
+            state.loop++; state.growth = 0; state.stage = 0; state.water = 75; state.fert = 15;
+            state.hasSucker = false; state.quality = 100; state.stamina = state.stats.maxStamina;
+            render();
+        }
+
+        function log(m) { 
+            const el = document.getElementById('msg-log');
+            el.innerText = `> ${m}`; el.style.color = "white";
+            setTimeout(() => { el.style.color = "#64748b"; }, 1000);
+        }
+
+        setInterval(update, 100);
+    </script>
+</body>
+</html>
